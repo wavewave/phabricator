@@ -1,1 +1,3 @@
-haskell binding to Phabricator REST API
+# phabricator
+haskell binding to phabricator REST API
+
