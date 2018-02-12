@@ -7,6 +7,9 @@ let
   hsenv = haskellPackages.ghcWithPackages (p: with p; [
     aeson
     aeson-pretty
+    github
+    gitlib
+    gitlib-libgit2
     lens
     wreq
   ]);
