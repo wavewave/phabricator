@@ -7,21 +7,14 @@ import           Data.Aeson
 import           Data.Aeson.Encode.Pretty         (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Text                        (Text)
+import qualified Data.Text                  as T
 import           Network.Wreq
 import           System.Environment               (getEnv)
 --
-import           Phabricator.Differential         (PhabResponse,PhabResult)
+import           Phabricator.Differential         (QueryKey(..),PhabQuery(..)
+                                                  ,PhabResponse,PhabResult,runQuery)
 
 main = do
   putStrLn "query test"
-  token <- getEnv "PHAB_API_TOKEN"
-  
-  r <- post "https://uphere.phacility.com/api/differential.revision.search"
-            ([ "api.token" := token
-             , "queryKey" := ("all" :: Text)
-             , "limit" := (5 :: Int)
-             
-             ])
-  let mv = eitherDecode (r ^. responseBody) :: Either String PhabResponse
-  print mv
-  -- mapM_ (BL.putStrLn . encodePretty) mv
+  token <- T.pack <$> getEnv "PHAB_API_TOKEN"
+  runQuery "https://uphere.phacility.com" token PhabQuery { _pq_queryKey = Open }
