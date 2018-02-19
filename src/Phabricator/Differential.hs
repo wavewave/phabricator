@@ -154,12 +154,12 @@ type URL = Text
 
 type Token = Text
 
-runQuery :: URL -> Token -> PhabQuery -> IO ()
+runQuery :: URL -> Token -> PhabQuery -> IO (Either String PhabResponse)
 runQuery url token query = do
   r <- post (T.unpack (url <> "/api/differential.revision.search"))
             ([ "api.token" := token
              , "queryKey" := queryKeyToText (_pq_queryKey query)
-             , "limit" := (5 :: Int)
+             -- , "limit" := (5 :: Int)
              ])
-  let mv = eitherDecode (r ^. responseBody) :: Either String PhabResponse
-  print mv
+  return (eitherDecode (r ^. responseBody) :: Either String PhabResponse)
+  -- print mv

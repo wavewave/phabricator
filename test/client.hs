@@ -17,4 +17,5 @@ import           Phabricator.Differential         (QueryKey(..),PhabQuery(..)
 main = do
   putStrLn "query test"
   token <- T.pack <$> getEnv "PHAB_API_TOKEN"
-  runQuery "https://uphere.phacility.com" token PhabQuery { _pq_queryKey = Open }
+  r <- runQuery "https://uphere.phacility.com" token PhabQuery { _pq_queryKey = Open }
+  print r
