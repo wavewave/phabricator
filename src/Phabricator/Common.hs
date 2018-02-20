@@ -11,6 +11,7 @@ import           Data.Aeson.Types      (fieldLabelModifier,typeMismatch)
 import           Data.Text             (Text)
 import qualified Data.Text        as T
 import           GHC.Generics          (Generic)
+import           Network.Wreq.Types    (FormParam(..))
 
 
 data ItemType = DIFF
@@ -56,28 +57,31 @@ instance ToJSON a => ToJSON (Item a) where
   toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 6 })
 
 
-class QueryKeyable q where
+class ToFormParam q where
+  encodeFormParam :: q -> [FormParam]
+
+{-
   queryKeyToText :: q -> Text
   textToQueryKey :: (Monad m) => Text -> m q
+-}
 
-
-data PhabQuery q = PhabQuery { _pq_queryKey :: q
-                             -- , constraints :: Value
-                             -- , attachments :: Value
-                             -- , order :: Value
-                             -- , before :: Value
-                             -- , after :: Value
-                             -- , limit :: Value
-                             -- , OutputFormat :: Value
-                             }
+data PhabQuery q c = PhabQuery { _pq_queryKey :: q
+                               , _pq_constraints :: Maybe c
+                               -- , attachments :: Value
+                               -- , order :: Value
+                               -- , before :: Value
+                               -- , after :: Value
+                               -- , limit :: Value
+                               -- , OutputFormat :: Value
+                               }
                  deriving (Show,Eq,Generic)
 
 makeLenses ''PhabQuery
 
-instance (FromJSON q) => FromJSON (PhabQuery q) where
+instance (FromJSON q, FromJSON c) => FromJSON (PhabQuery q c) where
   parseJSON = genericParseJSON (defaultOptions { fieldLabelModifier = drop 4 })
 
-instance (ToJSON q) => ToJSON (PhabQuery q) where
+instance (ToJSON q, ToJSON c) => ToJSON (PhabQuery q c) where
   toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 4 })
 
 
