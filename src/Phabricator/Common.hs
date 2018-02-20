@@ -13,16 +13,19 @@ import qualified Data.Text        as T
 import           GHC.Generics          (Generic)
 
 
-data ItemType = DREV
+data ItemType = DIFF
+              | DREV
               | REPO
               deriving (Show,Eq)
 
 itemTypeToText :: ItemType -> Text
+itemTypeToText DIFF = "DIFF"
 itemTypeToText DREV = "DREV"
 itemTypeToText REPO = "REPO"
 
 
 textToItemType :: (Monad m) => Text -> m ItemType
+textToItemType "DIFF" = pure DIFF
 textToItemType "DREV" = pure DREV
 textToItemType "REPO" = pure REPO
 textToItemType x      = fail (T.unpack x  ++ " is not ItemType.")
