@@ -53,6 +53,33 @@ instance ToJSON a => ToJSON (Item a) where
   toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 6 })
 
 
+class QueryKeyable q where
+  queryKeyToText :: q -> Text
+  textToQueryKey :: (Monad m) => Text -> m q
+
+
+data PhabQuery q = PhabQuery { _pq_queryKey :: q
+                             -- , constraints :: Value
+                             -- , attachments :: Value
+                             -- , order :: Value
+                             -- , before :: Value
+                             -- , after :: Value
+                             -- , limit :: Value
+                             -- , OutputFormat :: Value
+                             }
+                 deriving (Show,Eq,Generic)
+
+makeLenses ''PhabQuery
+
+instance (FromJSON q) => FromJSON (PhabQuery q) where
+  parseJSON = genericParseJSON (defaultOptions { fieldLabelModifier = drop 4 })
+
+instance (ToJSON q) => ToJSON (PhabQuery q) where
+  toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 4 })
+
+
+
+
 data PhabResponse a =
   PhabResponse { _pres_result :: a
                , _pres_error_code :: Maybe Int

@@ -18,7 +18,8 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        Phabricator.Common
-                       Phabricator.Differential
+                       Phabricator.Differential.Diff
+                       Phabricator.Differential.Revision
                        Phabricator.Diffusion
   -- other-modules:
   -- other-extensions:
@@ -33,19 +34,3 @@ library
   hs-source-dirs:      src
   default-language:    Haskell2010
 
-executable client
-  Main-is:             client.hs
-  hs-source-dirs:      test
-  -- exposed-modules:
-  -- other-modules:
-  -- other-extensions:
-  build-depends:       base >=4.9 && <4.10,
-                       aeson,
-                       aeson-pretty,
-                       bytestring,
-                       lens,
-                       text,
-                       wreq
-
-  hs-source-dirs:      src
-  default-language:    Haskell2010

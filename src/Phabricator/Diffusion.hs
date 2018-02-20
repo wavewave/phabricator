@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE InstanceSigs      #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
@@ -45,17 +46,16 @@ data QueryKey = Active
 
 makeLenses ''QueryKey
 
+instance QueryKeyable QueryKey where
+  queryKeyToText :: QueryKey -> Text
+  queryKeyToText Active   = "active"
+  queryKeyToText All      = "all"
 
-queryKeyToText :: QueryKey -> Text
-queryKeyToText Active   = "active"
-queryKeyToText All      = "all"
-
-
-textToQueryKey :: Monad m => Text -> m QueryKey
-textToQueryKey txt = case txt of
-                       "active"       -> pure Active
-                       "all"          -> pure All
-                       x              -> fail (T.unpack x ++ " is not QueryKey.")
+  textToQueryKey :: Monad m => Text -> m QueryKey
+  textToQueryKey txt = case txt of
+                         "active"       -> pure Active
+                         "all"          -> pure All
+                         x              -> fail (T.unpack x ++ " is not QueryKey.")
 
 
 instance ToJSON QueryKey where
@@ -66,30 +66,11 @@ instance FromJSON QueryKey where
   parseJSON invalid = typeMismatch "QueryKey" invalid
 
 
-data PhabQuery = PhabQuery { _pq_queryKey :: QueryKey
-                           -- , constraints :: Value
-                           -- , attachments :: Value
-                           -- , order :: Value
-                           -- , before :: Value
-                           -- , after :: Value
-                           -- , limit :: Value
-                           -- , OutputFormat :: Value
-                           }
-               deriving (Show,Eq,Generic)
-
-makeLenses ''PhabQuery
-
-instance FromJSON PhabQuery where
-  parseJSON = genericParseJSON (defaultOptions { fieldLabelModifier = drop 4 })
-
-instance ToJSON PhabQuery where
-  toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 4 })
-
 
 data PhabResult = PhabResult { _pr_maps :: Value
                              , _pr_cursor :: Value
                              , _pr_data :: [Item Field]
-                             , _pr_query :: PhabQuery
+                             , _pr_query :: PhabQuery QueryKey
                              }
                 deriving (Show,Eq,Generic)
 
@@ -102,8 +83,10 @@ instance ToJSON PhabResult where
   toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 4})
 
 
+apiPoint :: Text
+apiPoint = "/api/diffusion.repository.search"
 
-
+{-
 type URL = Text
 
 type Token = Text
@@ -116,3 +99,4 @@ runQuery url token query = do
              -- , "limit" := (5 :: Int)
              ])
   return (eitherDecode (r ^. responseBody))
+-}
