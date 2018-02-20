@@ -38,41 +38,6 @@ instance ToJSON Field where
   toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 7 })
 
 
-data ItemType = DREV
-              deriving (Show,Eq)
-
-itemTypeToText :: ItemType -> Text
-itemTypeToText DREV = "DREV"
-
-textToItemType :: (Monad m) => Text -> m ItemType
-textToItemType "DREV" = pure DREV
-textToItemType x      = fail (T.unpack x  ++ " is not ItemType.")
-
-
-instance ToJSON ItemType where
-  toJSON = String . itemTypeToText
-
-instance FromJSON ItemType where
-  parseJSON (String txt) = textToItemType txt
-  parseJSON invalid = typeMismatch "ItemType" invalid
-
-
-data Item = Item { _item_attachments :: Value
-                 , _item_phid :: Text
-                 , _item_id :: Int
-                 , _item_type :: ItemType
-                 , _item_fields :: Field
-                 }
-              deriving (Show,Eq,Generic)
-
-makeLenses ''Item
-
-instance FromJSON Item where
-  parseJSON = genericParseJSON (defaultOptions { fieldLabelModifier = drop 6 })
-
-instance ToJSON Item where
-  toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 6 })
-
 
 
 data QueryKey = Open
@@ -153,7 +118,7 @@ data Order = Newest
 
 data PhabResult = PhabResult { _pr_maps :: Value
                              , _pr_cursor :: Value
-                             , _pr_data :: [Item]
+                             , _pr_data :: [Item Field]
                              , _pr_query :: PhabQuery
                              }
                 deriving (Show,Eq,Generic)
