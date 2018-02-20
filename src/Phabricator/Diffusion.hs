@@ -2,12 +2,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-module Phabricator.Differential where
+module Phabricator.Diffusion where
 
 import           Control.Lens          ((^.),makeLenses)
 import           Data.Aeson
-import           Data.Aeson.Types
-import           Data.Maybe            (fromMaybe)
+import           Data.Aeson.Types      (fieldLabelModifier,typeMismatch)
 import           Data.Monoid           ((<>))
 import           Data.Text             (Text)
 import qualified Data.Text        as T
@@ -17,14 +16,15 @@ import           Network.Wreq          (post,responseBody,FormParam((:=)))
 import           Phabricator.Common
 
 
-data Field = Field { _field_summary :: Text
-                   , _field_status :: Value
-                   , _field_repositoryPHID :: Maybe Text
-                   , _field_diffPHID :: Maybe Text
+data Field = Field { _field_name :: Text
+                   , _field_vcs :: Text
+                   , _field_callsign :: Maybe Text
+                   , _field_shortName :: Maybe Text
+                   , _field_status :: Text
+                   , _field_isImporting :: Bool
+                   , _field_spacePHID :: Maybe Text
                    , _field_dateCreated :: Int
                    , _field_dateModified :: Int
-                   , _field_authorPHID :: Text
-                   , _field_title :: Text
                    , _field_policy :: Value
                    }
            deriving (Show,Eq,Generic)
@@ -39,27 +39,21 @@ instance ToJSON Field where
 
 
 
-
-data QueryKey = Open
-              | Active
-              | Authored
+data QueryKey = Active
               | All
               deriving (Show,Eq,Generic)
 
 makeLenses ''QueryKey
 
+
 queryKeyToText :: QueryKey -> Text
-queryKeyToText Open     = "lks1dJdapQFa"
 queryKeyToText Active   = "active"
-queryKeyToText Authored = "authored"
 queryKeyToText All      = "all"
 
 
 textToQueryKey :: Monad m => Text -> m QueryKey
 textToQueryKey txt = case txt of
-                       "lks1dJdapQFa" -> pure Open
                        "active"       -> pure Active
-                       "authored"     -> pure Authored
                        "all"          -> pure All
                        x              -> fail (T.unpack x ++ " is not QueryKey.")
 
@@ -70,6 +64,7 @@ instance ToJSON QueryKey where
 instance FromJSON QueryKey where
   parseJSON (String txt) = textToQueryKey txt
   parseJSON invalid = typeMismatch "QueryKey" invalid
+
 
 data PhabQuery = PhabQuery { _pq_queryKey :: QueryKey
                            -- , constraints :: Value
@@ -91,31 +86,6 @@ instance ToJSON PhabQuery where
   toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 4 })
 
 
-
-{-
-data Constraints = Constraints { ids :: Value
-                               , phid :: Value
-                               , responsiblePHIDs :: Value
-                               , authorPHIDs :: Value
-                               , reviewerPHIDs :: Value
-                               , repositoryPHIDs :: Value
-                               , statuses :: Value
-                               , query :: Value
-                               , subscribers :: Query
-                               , projects :: Value
-                               , bucket :: Value
-                               }
-
-data Order = Newest
-           | Oldest
-           | Relevance
-           | Updated
-           | Outdated
-
-
--}
-
-
 data PhabResult = PhabResult { _pr_maps :: Value
                              , _pr_cursor :: Value
                              , _pr_data :: [Item Field]
@@ -134,15 +104,13 @@ instance ToJSON PhabResult where
 
 
 
-
-
 type URL = Text
 
 type Token = Text
 
 runQuery :: URL -> Token -> PhabQuery -> IO (Either String (PhabResponse PhabResult))
 runQuery url token query = do
-  r <- post (T.unpack (url <> "/api/differential.revision.search"))
+  r <- post (T.unpack (url <> "/api/diffusion.repository.search"))
             ([ "api.token" := token
              , "queryKey" := queryKeyToText (_pq_queryKey query)
              -- , "limit" := (5 :: Int)
