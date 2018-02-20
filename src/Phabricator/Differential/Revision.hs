@@ -1,8 +1,9 @@
 {-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE InstanceSigs      #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-module Phabricator.Differential where
+module Phabricator.Differential.Revision where
 
 import           Control.Lens          ((^.),makeLenses)
 import           Data.Aeson
@@ -12,7 +13,6 @@ import           Data.Monoid           ((<>))
 import           Data.Text             (Text)
 import qualified Data.Text        as T
 import           GHC.Generics          (Generic)
-import           Network.Wreq          (post,responseBody,FormParam((:=)))
 --
 import           Phabricator.Common
 
@@ -20,7 +20,7 @@ import           Phabricator.Common
 data Field = Field { _field_summary :: Text
                    , _field_status :: Value
                    , _field_repositoryPHID :: Maybe Text
-                   , _field_diffPHID :: Maybe Text
+                   , _field_diffPHID :: Text
                    , _field_dateCreated :: Int
                    , _field_dateModified :: Int
                    , _field_authorPHID :: Text
@@ -48,20 +48,20 @@ data QueryKey = Open
 
 makeLenses ''QueryKey
 
-queryKeyToText :: QueryKey -> Text
-queryKeyToText Open     = "lks1dJdapQFa"
-queryKeyToText Active   = "active"
-queryKeyToText Authored = "authored"
-queryKeyToText All      = "all"
+instance QueryKeyable QueryKey where
+  queryKeyToText :: QueryKey -> Text
+  queryKeyToText Open     = "lks1dJdapQFa"
+  queryKeyToText Active   = "active"
+  queryKeyToText Authored = "authored"
+  queryKeyToText All      = "all"
 
-
-textToQueryKey :: Monad m => Text -> m QueryKey
-textToQueryKey txt = case txt of
-                       "lks1dJdapQFa" -> pure Open
-                       "active"       -> pure Active
-                       "authored"     -> pure Authored
-                       "all"          -> pure All
-                       x              -> fail (T.unpack x ++ " is not QueryKey.")
+  textToQueryKey :: Monad m => Text -> m QueryKey
+  textToQueryKey txt = case txt of
+                         "lks1dJdapQFa" -> pure Open
+                         "active"       -> pure Active
+                         "authored"     -> pure Authored
+                         "all"          -> pure All
+                         x              -> fail (T.unpack x ++ " is not QueryKey.")
 
 
 instance ToJSON QueryKey where
@@ -70,26 +70,6 @@ instance ToJSON QueryKey where
 instance FromJSON QueryKey where
   parseJSON (String txt) = textToQueryKey txt
   parseJSON invalid = typeMismatch "QueryKey" invalid
-
-data PhabQuery = PhabQuery { _pq_queryKey :: QueryKey
-                           -- , constraints :: Value
-                           -- , attachments :: Value
-                           -- , order :: Value
-                           -- , before :: Value
-                           -- , after :: Value
-                           -- , limit :: Value
-                           -- , OutputFormat :: Value
-                           }
-               deriving (Show,Eq,Generic)
-
-makeLenses ''PhabQuery
-
-instance FromJSON PhabQuery where
-  parseJSON = genericParseJSON (defaultOptions { fieldLabelModifier = drop 4 })
-
-instance ToJSON PhabQuery where
-  toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 4 })
-
 
 
 {-
@@ -119,7 +99,7 @@ data Order = Newest
 data PhabResult = PhabResult { _pr_maps :: Value
                              , _pr_cursor :: Value
                              , _pr_data :: [Item Field]
-                             , _pr_query :: PhabQuery
+                             , _pr_query :: PhabQuery QueryKey
                              }
                 deriving (Show,Eq,Generic)
 
@@ -131,20 +111,9 @@ instance FromJSON PhabResult where
 instance ToJSON PhabResult where
   toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 4})
 
+apiPoint :: Text
+apiPoint = "/api/differential.revision.search"
 
 
 
 
-
-type URL = Text
-
-type Token = Text
-
-runQuery :: URL -> Token -> PhabQuery -> IO (Either String (PhabResponse PhabResult))
-runQuery url token query = do
-  r <- post (T.unpack (url <> "/api/differential.revision.search"))
-            ([ "api.token" := token
-             , "queryKey" := queryKeyToText (_pq_queryKey query)
-             -- , "limit" := (5 :: Int)
-             ])
-  return (eitherDecode (r ^. responseBody))

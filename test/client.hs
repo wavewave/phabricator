@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
@@ -11,13 +12,16 @@ import qualified Data.Text                  as T
 import           Network.Wreq
 import           System.Environment               (getEnv)
 --
-import qualified Phabricator.Differential   as D
+import qualified Phabricator.Common         as C
+import qualified Phabricator.Differential.Revision as D
 import qualified Phabricator.Diffusion      as R
+import           Phabricator.Query
 
 main = do
   putStrLn "query test"
   token <- T.pack <$> getEnv "PHAB_API_TOKEN"
   -- r <- D.runQuery "https://uphere.phacility.com" token D.PhabQuery { _pq_queryKey = Open }
   -- print r
-  r <- R.runQuery "https://uphere.phacility.com" token R.PhabQuery { R._pq_queryKey = R.Active }
+  r :: Either String (C.PhabResponse R.PhabResult)
+    <- runQuery "https://uphere.phacility.com" R.apiPoint token C.PhabQuery { C._pq_queryKey = R.Active }
   print r
