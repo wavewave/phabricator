@@ -1,6 +1,6 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Phabricator.Differential where
 
@@ -13,6 +13,9 @@ import           Data.Text             (Text)
 import qualified Data.Text        as T
 import           GHC.Generics          (Generic)
 import           Network.Wreq          (post,responseBody,FormParam((:=)))
+--
+import           Phabricator.Common
+
 
 data Field = Field { _field_summary :: Text
                    , _field_status :: Value
@@ -166,31 +169,17 @@ instance ToJSON PhabResult where
 
 
 
-data PhabResponse = PhabResponse { _pres_result :: PhabResult
-                                 , _pres_error_code :: Maybe Int
-                                 , _pres_error_info :: Maybe Text
-                                 }
-                  deriving (Show,Eq,Generic)
-
-makeLenses ''PhabResponse
-
-instance FromJSON PhabResponse where
-  parseJSON = genericParseJSON (defaultOptions { fieldLabelModifier = drop 6 })
-
-
-instance ToJSON PhabResponse where
-  toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 6})
 
 
 type URL = Text
 
 type Token = Text
 
-runQuery :: URL -> Token -> PhabQuery -> IO (Either String PhabResponse)
+runQuery :: URL -> Token -> PhabQuery -> IO (Either String (PhabResponse PhabResult))
 runQuery url token query = do
   r <- post (T.unpack (url <> "/api/differential.revision.search"))
             ([ "api.token" := token
              , "queryKey" := queryKeyToText (_pq_queryKey query)
              -- , "limit" := (5 :: Int)
              ])
-  return (eitherDecode (r ^. responseBody) :: Either String PhabResponse)
+  return (eitherDecode (r ^. responseBody))

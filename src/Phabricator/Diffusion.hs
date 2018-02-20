@@ -1,0 +1,95 @@
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
+
+module Phabricator.Diffusion where
+
+import           Control.Lens          ((^.),makeLenses)
+import           Data.Aeson
+import           Data.Aeson.Types      (fieldLabelModifier,typeMismatch)
+import           Data.Monoid           ((<>))
+import           Data.Text             (Text)
+import qualified Data.Text        as T
+import           GHC.Generics          (Generic)
+import           Network.Wreq          (post,responseBody,FormParam((:=)))
+--
+import           Phabricator.Common
+
+data QueryKey = Active
+              | All
+              deriving (Show,Eq,Generic)
+
+makeLenses ''QueryKey
+
+
+queryKeyToText :: QueryKey -> Text
+queryKeyToText Active   = "active"
+queryKeyToText All      = "all"
+
+
+textToQueryKey :: Monad m => Text -> m QueryKey
+textToQueryKey txt = case txt of
+                       "active"       -> pure Active
+                       "all"          -> pure All
+                       x              -> fail (T.unpack x ++ " is not QueryKey.")
+
+
+instance ToJSON QueryKey where
+  toJSON = String . queryKeyToText
+
+instance FromJSON QueryKey where
+  parseJSON (String txt) = textToQueryKey txt
+  parseJSON invalid = typeMismatch "QueryKey" invalid
+
+
+data PhabQuery = PhabQuery { _pq_queryKey :: QueryKey
+                           -- , constraints :: Value
+                           -- , attachments :: Value
+                           -- , order :: Value
+                           -- , before :: Value
+                           -- , after :: Value
+                           -- , limit :: Value
+                           -- , OutputFormat :: Value
+                           }
+               deriving (Show,Eq,Generic)
+
+makeLenses ''PhabQuery
+
+instance FromJSON PhabQuery where
+  parseJSON = genericParseJSON (defaultOptions { fieldLabelModifier = drop 4 })
+
+instance ToJSON PhabQuery where
+  toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 4 })
+
+
+{- 
+data PhabResult = PhabResult { _pr_maps :: Value
+                             , _pr_cursor :: Value
+                             , _pr_data :: [Item]
+                             , _pr_query :: PhabQuery
+                             }
+                deriving (Show,Eq,Generic)
+
+makeLenses ''PhabResult
+
+instance FromJSON PhabResult where
+  parseJSON = genericParseJSON (defaultOptions { fieldLabelModifier = drop 4 })
+
+instance ToJSON PhabResult where
+  toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 4})
+
+
+-}
+
+type URL = Text
+
+type Token = Text
+
+runQuery :: URL -> Token -> PhabQuery -> IO (Either String (PhabResponse Value)) -- PhabResult))
+runQuery url token query = do
+  r <- post (T.unpack (url <> "/api/diffusion.repository.search"))
+            ([ "api.token" := token
+             , "queryKey" := queryKeyToText (_pq_queryKey query)
+             -- , "limit" := (5 :: Int)
+             ])
+  return (eitherDecode (r ^. responseBody)) --  :: Either String PhabResponse)

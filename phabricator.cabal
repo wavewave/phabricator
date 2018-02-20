@@ -16,7 +16,10 @@ extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Phabricator.Differential
+  exposed-modules:
+                       Phabricator.Common
+                       Phabricator.Differential
+                       Phabricator.Diffusion
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.9 && <4.10,
