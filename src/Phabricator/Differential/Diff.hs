@@ -8,11 +8,14 @@ module Phabricator.Differential.Diff where
 import           Control.Lens          ((^.),makeLenses)
 import           Data.Aeson
 import           Data.Aeson.Types
+import qualified Data.ByteString.Char8 as B
+import           Data.Default          (Default(..))
 import           Data.Maybe            (fromMaybe)
 import           Data.Monoid           ((<>))
 import           Data.Text             (Text)
 import qualified Data.Text        as T
 import           GHC.Generics          (Generic)
+import           Network.Wreq          (FormParam((:=)))
 --
 import           Phabricator.Common
 
@@ -41,14 +44,18 @@ data QueryKey = All
 
 makeLenses ''QueryKey
 
-instance QueryKeyable QueryKey where
-  queryKeyToText :: QueryKey -> Text
-  queryKeyToText All      = "all"
 
-  textToQueryKey :: Monad m => Text -> m QueryKey
-  textToQueryKey txt = case txt of
-                         "all"          -> pure All
-                         x              -> fail (T.unpack x ++ " is not QueryKey.")
+
+queryKeyToText :: QueryKey -> Text
+queryKeyToText All      = "all"
+
+textToQueryKey :: Monad m => Text -> m QueryKey
+textToQueryKey txt = case txt of
+                       "all"          -> pure All
+                       x              -> fail (T.unpack x ++ " is not QueryKey.")
+
+instance ToFormParam QueryKey where
+  encodeFormParam q = [ "queryKey" := queryKeyToText q ]
 
 
 instance ToJSON QueryKey where
@@ -58,10 +65,39 @@ instance FromJSON QueryKey where
   parseJSON (String txt) = textToQueryKey txt
   parseJSON invalid = typeMismatch "QueryKey" invalid
 
+
+data QueryConstraint =
+  QueryConstraint { _qc_ids :: [Int]
+                  , _qc_phids :: [Text]
+                  , _qc_revisionPHIDs :: [Text]
+                  }
+  deriving (Show,Eq,Generic)
+
+makeLenses ''QueryConstraint
+
+instance Default QueryConstraint where
+  def = QueryConstraint { _qc_ids = []
+                        , _qc_phids = []
+                        , _qc_revisionPHIDs = []
+                        }
+
+instance ToFormParam QueryConstraint where
+  encodeFormParam c = let phids = c^.qc_phids
+                          n = length phids
+                      in map (\(i,phid) -> B.pack ("constraints[phids][" ++ show i ++ "]") := phid) (zip [0..] (c^.qc_phids))
+ --                        ["phids" := c^.qc_phids]
+
+instance FromJSON QueryConstraint where
+  parseJSON = genericParseJSON (defaultOptions { fieldLabelModifier = drop 4 })
+
+instance ToJSON QueryConstraint where
+  toJSON = genericToJSON (defaultOptions { fieldLabelModifier = drop 4})
+
+
 data PhabResult = PhabResult { _pr_maps :: Value
                              , _pr_cursor :: Value
                              , _pr_data :: [Item Field]
-                             , _pr_query :: PhabQuery QueryKey
+                             , _pr_query :: PhabQuery QueryKey QueryConstraint
                              }
                 deriving (Show,Eq,Generic)
 

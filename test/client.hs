@@ -7,6 +7,7 @@ import           Control.Lens
 import           Data.Aeson
 import           Data.Aeson.Encode.Pretty         (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as BL
+import           Data.Default
 import           Data.Text                        (Text)
 import qualified Data.Text                  as T
 import           Network.Wreq
@@ -29,5 +30,10 @@ main = do
   -}
   
   r :: Either String (C.PhabResponse DD.PhabResult)
-    <- runQuery "https://uphere.phacility.com" DD.apiPoint token C.PhabQuery { C._pq_queryKey = DD.All }
+    <- runQuery "https://uphere.phacility.com" DD.apiPoint token
+         C.PhabQuery { C._pq_queryKey = DD.All
+                     -- , C._pq_constraints = Nothing :: Maybe DD.QueryConstraint
+                     , C._pq_constraints = Just ((DD.qc_phids .~ [ "PHID-DIFF-7kr62hdhsoowtbcvegvg" ]) def)
+
+                     }
   print r
