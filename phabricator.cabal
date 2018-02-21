@@ -27,6 +27,7 @@ library
                        aeson,
                        aeson-pretty,
                        bytestring,
+                       data-default,
                        lens,
                        text,
                        wreq
