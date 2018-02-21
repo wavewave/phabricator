@@ -21,6 +21,7 @@ library
                        Phabricator.Differential.Diff
                        Phabricator.Differential.Revision
                        Phabricator.Diffusion
+                       Phabricator.Query
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.9 && <4.10,
@@ -28,6 +29,7 @@ library
                        aeson-pretty,
                        bytestring,
                        data-default,
+                       http-client,
                        lens,
                        text,
                        wreq
