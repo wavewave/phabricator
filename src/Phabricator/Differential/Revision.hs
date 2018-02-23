@@ -8,6 +8,7 @@ module Phabricator.Differential.Revision where
 import           Control.Lens          ((^.),makeLenses)
 import           Data.Aeson
 import           Data.Aeson.Types
+import qualified Data.ByteString.Char8 as B
 import           Data.Maybe            (fromMaybe)
 import           Data.Monoid           ((<>))
 import           Data.Text             (Text)
@@ -89,7 +90,7 @@ data Order = Newest
 
 data QueryConstraint =
   QueryConstraint { _qc_ids :: [Int]
-                  , _qc_phid :: [Text]
+                  , _qc_phids :: [Text]
                   , _qc_responsiblePHIDs ::[Text]
                   , _qc_authorPHIDs :: [Text]
                   , _qc_reviewerPHIDs :: [Text]
@@ -103,6 +104,12 @@ data QueryConstraint =
   deriving (Show,Eq,Generic)
 
 makeLenses ''QueryConstraint
+
+instance ToFormParam QueryConstraint where
+  encodeFormParam c = let phids = c^.qc_phids
+                          n = length phids
+                      in map (\(i,phid) -> B.pack ("constraints[phids][" ++ show i ++ "]") := phid) (zip [0..] (c^.qc_phids))
+
 
 instance FromJSON QueryConstraint where
   parseJSON = genericParseJSON (defaultOptions { fieldLabelModifier = drop 4 })

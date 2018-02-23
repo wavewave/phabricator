@@ -5,14 +5,15 @@
 
 module Phabricator.Diffusion where
 
-import           Control.Lens          ((^.),makeLenses)
+import           Control.Lens               ((^.),makeLenses)
 import           Data.Aeson
-import           Data.Aeson.Types      (fieldLabelModifier,typeMismatch)
-import           Data.Monoid           ((<>))
-import           Data.Text             (Text)
-import qualified Data.Text        as T
-import           GHC.Generics          (Generic)
-import           Network.Wreq          (post,responseBody,FormParam((:=)))
+import           Data.Aeson.Types           (fieldLabelModifier,typeMismatch)
+import qualified Data.ByteString.Char8 as B
+import           Data.Monoid                ((<>))
+import           Data.Text                  (Text)
+import qualified Data.Text             as T
+import           GHC.Generics               (Generic)
+import           Network.Wreq               (post,responseBody,FormParam((:=)))
 --
 import           Phabricator.Common
 
@@ -69,7 +70,7 @@ instance FromJSON QueryKey where
 
 data QueryConstraint =
   QueryConstraint { _qc_ids :: [Int]
-                  , _qc_phid :: [Text]
+                  , _qc_phids :: [Text]
                   , _qc_callsigns :: [Text]
                   -- , _qc_status
                   -- , _qc_hosted
@@ -82,6 +83,13 @@ data QueryConstraint =
   deriving (Show,Eq,Generic)
 
 makeLenses ''QueryConstraint
+
+instance ToFormParam QueryConstraint where
+  encodeFormParam c = let phids = c^.qc_phids
+                          n = length phids
+                      in map (\(i,phid) -> B.pack ("constraints[phids][" ++ show i ++ "]") := phid) (zip [0..] (c^.qc_phids))
+
+
 
 instance FromJSON QueryConstraint where
   parseJSON = genericParseJSON (defaultOptions { fieldLabelModifier = drop 4 })

@@ -25,21 +25,13 @@ type Token = Text
 
 runQuery :: (ToFormParam q, ToFormParam c, FromJSON r) => URL -> API -> Token -> PhabQuery q c -> IO (Either String (PhabResponse r))
 runQuery url api token query = do
-
-  -- print $ maybe [] encodeFormParam (_pq_constraints query)
-
   let params = ([ "api.token" := token ] ++ encodeFormParam (_pq_queryKey query) ++ maybe [] encodeFormParam (_pq_constraints query))
-
-  -- initReq <- parseRequest "http://demo.com"
-  r <- postPayload params N.defaultRequest
+  {- r <- postPayload params N.defaultRequest
   case N.requestBody r of
     N.RequestBodyLBS str -> print str
     N.RequestBodyBS str -> print str
-    _ -> return ()
-  -- B.putStrLn (params)
+    _ -> return () -}
   r <- post (T.unpack (url <> api)) params
-             -- , "limit" := (5 :: Int)
-
-  print r
+  -- print r
   return (eitherDecode (r ^. responseBody))
 
